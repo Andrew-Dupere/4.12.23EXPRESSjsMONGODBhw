@@ -34,26 +34,43 @@ const register = {
 const login = {
     type: GraphQLString,
     args: {
-        username: { type: GraphQLString },
         email: { type: GraphQLString },
         password: { type: GraphQLString }
            },
+
+
     async resolve(parent, args){
-        const checkPass = await User.findOne({ passowrd: args.password }).exec();
-        if (checkPass){
-            throw new Error('Password is incorrect')
+        //get the user from the db based on email
+        const user = await User.findOne({ email: args.email })
+
+        // get hashed pw from the user
+        const hashedPassword = user?.passowrd || '';
+
+        const correctPassword = await bcrypt.compare(args.password, hashedPassword)
+        if (!user || !correctPassword){
+            throw new Error('Invalid Credentials')
         }
-        const { username, email, password } = args;
-        const passwordHash = await bcrypt.hash(password, 10);
 
-        const user = new User({ username, email, password: passwordHash });
+        const token = createJWT(user)
 
-        await user.login();
-
-        const token = createJWT(user);
-
-        return token
+        return token;
     }
+    // async resolve(parent, args){
+    //     const checkPass = await User.findOne({ passowrd: args.password }).exec();
+    //     if (checkPass){
+    //         throw new Error('Password is incorrect')
+    //     }
+    //     const { username, email, password } = args;
+    //     const passwordHash = await bcrypt.hash(password, 10);
+
+    //     const user = new User({ username, email, password: passwordHash });
+
+    //     await user.login();
+
+    //     const token = createJWT(user);
+
+    //     return token
+    // }
 }
 
 //export the object created
